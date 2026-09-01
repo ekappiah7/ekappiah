@@ -1,0 +1,27 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      ".firebaserc",
+      "**/.*",
+      "**/node_modules/**",
+      "expenses/firebase/**"
+    ],
+    "cleanUrls": true,
+    "headers": [
+      {
+        "source": "/expenses/sw.js",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "/expenses/**/*.@(js|css)",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }]
+      }
+    ]
+  },
+  "firestore": {
+    "rules": "expenses/firebase/firestore.rules",
+    "indexes": "expenses/firebase/firestore.indexes.json"
+  }
+}

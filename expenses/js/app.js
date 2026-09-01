@@ -53,8 +53,12 @@ async function trySync({ quiet = true } = {}) {
     state.sync = { status: 'synced', message: `${result.pushed} up / ${result.pulled} down` };
     if (result.pulled) await refresh();
   } else {
-    state.sync = { status: result.reason === 'error' ? 'error' : 'local', message: result.message || result.reason };
-    if (!quiet && result.reason === 'error') toast('Sync failed: ' + result.message, 'bad');
+    const status = result.reason === 'error' ? 'error'
+      : result.reason === 'unreachable' ? 'unreachable' : 'local';
+    state.sync = { status, message: result.message || result.reason };
+    if (!quiet && (result.reason === 'error' || result.reason === 'unreachable')) {
+      toast(result.message || 'Sync failed', 'bad');
+    }
   }
   paintSyncBadge();
   return result;
@@ -65,7 +69,7 @@ function paintSyncBadge() {
   if (!badge) return;
   const labels = {
     syncing: 'Syncing…', synced: 'Synced', error: 'Sync error',
-    local: state.householdId ? 'Offline' : 'On this device', idle: '',
+    unreachable: 'No Firebase', local: 'On this device', idle: '',
   };
   badge.textContent = labels[state.sync.status] || '';
   badge.dataset.status = state.sync.status;
@@ -567,18 +571,41 @@ async function paintCloudPanel() {
   const panel = $('#cloud-panel');
   if (!panel) return;
   const config = await cloud.getConfig();
-  if (!config.url || !config.anonKey) {
+  if (!config.config) {
     panel.innerHTML = `
-      <p class="card-sub">The app works on its own. Add a Supabase project to share one ledger across the family’s phones. Setup steps are in <code>expenses/README.md</code>.</p>
-      <form class="stack-form" data-form="supabase">
-        <label>Project URL <input name="url" placeholder="https://xxxx.supabase.co" required></label>
-        <label>Anon public key <input name="anonKey" placeholder="eyJhbGciOi…" required></label>
+      <p class="card-sub">The app works on its own. Add a Firebase project to share one ledger across the family’s phones. Setup steps are in <code>expenses/README.md</code>.</p>
+      <form class="stack-form" data-form="firebase">
+        <label>Firebase web config
+          <textarea name="config" rows="7" required
+            placeholder="Paste the whole block from the Firebase console:&#10;&#10;const firebaseConfig = {&#10;  apiKey: &quot;…&quot;,&#10;  authDomain: &quot;your-app.firebaseapp.com&quot;,&#10;  projectId: &quot;your-app&quot;,&#10;  appId: &quot;1:…&quot;&#10;};"></textarea>
+        </label>
         <button class="primary-btn" type="submit">Connect</button>
       </form>`;
     return;
   }
+  // Fetching the SDK and restoring a session both take a moment on a slow
+  // connection. Say so, rather than leaving the previous panel on screen
+  // looking like the click did nothing.
+  panel.innerHTML = '<p class="card-sub">Connecting to Firebase…</p>';
+
   const user = await cloud.currentUser().catch(() => null);
   state.user = user;
+
+  // A configured project whose SDK will not load is a different problem from
+  // being signed out, and saying "sign in" would send someone hunting for a
+  // password that was never the issue.
+  const blocked = cloud.sdkError();
+  if (!user && blocked) {
+    panel.innerHTML = `
+      <p class="warn">${h(blocked)}</p>
+      <p class="card-sub">Your ledger is safe on this device and will sync once Firebase is reachable.</p>
+      <div class="row-actions">
+        <button class="primary-btn" data-action="retry-cloud">Try again</button>
+        <button class="ghost-btn" data-action="forget-firebase">Use a different project</button>
+      </div>`;
+    return;
+  }
+
   if (!user) {
     panel.innerHTML = `
       <form class="stack-form" data-form="signin">
@@ -589,7 +616,7 @@ async function paintCloudPanel() {
           <button class="ghost-btn" type="submit" value="up" name="mode">Create account</button>
         </div>
       </form>
-      <button class="link-btn" data-action="forget-supabase">Use a different project</button>`;
+      <button class="link-btn" data-action="forget-firebase">Use a different project</button>`;
     return;
   }
   let households = [];
@@ -601,6 +628,7 @@ async function paintCloudPanel() {
     <p class="signed-in">Signed in as <strong>${h(user.email)}</strong>
       <button class="link-btn" data-action="signout">Sign out</button></p>
     ${error ? `<p class="warn">${h(error)}</p>` : ''}
+    ${config.config ? `<p class="card-sub">Project <code>${h(config.config.projectId)}</code></p>` : ''}
     ${current ? `<p class="kv-inline">Household <strong>${h(current.name)}</strong> ·
       invite code <code class="code-chip">${h(current.invite_code)}</code>
       <button class="mini-btn" data-action="copy-code" data-code="${h(current.invite_code)}">Copy</button></p>` : ''}
@@ -868,7 +896,8 @@ const ACTIONS = {
     paintCloudPanel();
   },
   signout: async () => { await cloud.signOut(); state.user = null; paintCloudPanel(); },
-  'forget-supabase': async () => { await cloud.setConfig({ url: '', anonKey: '' }); paintCloudPanel(); },
+  'forget-firebase': async () => { await cloud.setConfig(null); paintCloudPanel(); },
+  'retry-cloud': async () => { await trySync({ quiet: false }); await paintCloudPanel(); },
   'copy-code': (el) => {
     navigator.clipboard.writeText(el.dataset.code).then(() => toast('Invite code copied'));
   },
@@ -1012,9 +1041,9 @@ const FORMS = {
     if (preview) preview.scrollIntoView({ behavior: 'smooth', block: 'start' });
   },
 
-  supabase: async (form) => {
+  firebase: async (form) => {
     const data = Object.fromEntries(new FormData(form));
-    await cloud.setConfig(data);
+    await cloud.setConfig(data.config);
     await paintCloudPanel();
     toast('Connected. Sign in next.');
   },

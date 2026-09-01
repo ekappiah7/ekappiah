@@ -6,11 +6,12 @@ have — is a ratio with income on one side of it. An expenses-only app can tell
 that you spent GHS 3,200 this month. It cannot tell you whether that was fine.
 
 Offline-first: everything is written to IndexedDB on the device and works with no
-network at all. Add a free Supabase project and the same ledger syncs across every
+network at all. Add a free Firebase project and the same ledger syncs across every
 phone in the house, each person signing in as themselves.
 
-- **Live at** `https://<your-github-username>.github.io/ekappiah/expenses/` once Pages
-  is enabled for the repo. Nothing to build — it is plain ES modules and CSS.
+- **Deploy**: `firebase deploy` from the repo root. `firebase.json` serves the whole
+  repo, so the portfolio stays at `/` and the app lives at `/expenses/`. Nothing to
+  build — it is plain ES modules and CSS.
 - **Locally**: `python3 -m http.server 8000` from the repo root, then open
   `http://localhost:8000/expenses/`. (Open the folder over `http://`, not `file://` —
   ES modules and service workers need an origin.)
@@ -67,44 +68,81 @@ representation and is the only place currency formatting happens.
 
 ## Setting up family sharing
 
-Everything above works with no account. These steps add sync.
+Everything above works with no account. These steps add sync. The free Spark plan
+is enough — nothing here uses Cloud Functions, deliberately, so no billing account
+is required.
 
-1. **Create a Supabase project** at [supabase.com](https://supabase.com) — the free
-   tier is far more than a household needs.
-2. **Run the schema.** Dashboard → SQL Editor → New query → paste all of
-   [`supabase/schema.sql`](supabase/schema.sql) → Run. It is idempotent, so
-   re-running it later to pick up changes is safe.
-3. **Turn off email confirmation** while you are setting up, if you want to skip
-   inbox round-trips: Authentication → Providers → Email.
-4. **Open the app → Settings → Family sharing.** Paste the project URL and the
-   **anon public** key (Project Settings → API). The anon key is designed to ship in
-   client code; row-level security is what protects the data, not key secrecy.
-   Never paste the `service_role` key.
-5. **Create an account, then create a household.** You get an 8-character invite
+1. **Create a Firebase project** at [console.firebase.google.com](https://console.firebase.google.com).
+2. **Enable Email/Password sign-in**: Authentication → Sign-in method → Email/Password
+   → Enable. (Leave "Email link" off.)
+3. **Create a Firestore database**: Firestore Database → Create database → start in
+   **production mode** and pick a region close to you (`europe-west1` is a reasonable
+   default from Ghana). Production mode denies everything until step 4, which is
+   what you want.
+4. **Deploy the rules**, from the repo root:
+   ```sh
+   npm install -g firebase-tools     # once
+   firebase login
+   # put your project id in .firebaserc, then:
+   firebase deploy --only firestore:rules
+   ```
+   Nothing works until these are deployed — production mode denies all reads and
+   writes by default, and the rules in `firebase/firestore.rules` are what grant
+   household members access to their own data.
+5. **Register a web app**: Project settings → Your apps → Web (`</>`). Copy the
+   `firebaseConfig` block it shows you.
+6. **Open the app → Settings → Family sharing** and paste that whole block in — the
+   `const firebaseConfig = { ... }` snippet as-is, comments and all. The web API key
+   is designed to ship in client code; the security rules are what protect the data,
+   not key secrecy.
+7. **Create an account, then create a household.** You get an 8-character invite
    code.
-6. **On each family member's phone**: open the same URL, add the same project URL
-   and anon key, create their own account, and **Join** with the invite code.
-   Everyone then sees the same ledger, and each entry records who created it.
+8. **On each family member's phone**: open the same URL, paste the same config,
+   create their own account, and **Join** with the invite code. Everyone then sees
+   the same ledger, and each entry records who created it.
+9. **Deploy the app itself** whenever you like: `firebase deploy --only hosting`.
 
 Add the page to the home screen on Android or iOS and it runs like an app.
 
 ### How sync works
 
-Every synced row carries `household_id`, `updated_at` and a `deleted` tombstone.
-The app pushes locally-changed rows first, lets the server stamp `updated_at`, then
-pulls everything stamped at or after its cursor. Last write to reach the server
-wins, which for a household of a few phones is what people actually expect. Because
-deletes are tombstones rather than real deletes, a row deleted on one phone
-disappears on the others instead of coming back to life on their next push. Locally
-edited rows are never overwritten by a pull before they have been pushed.
+```
+households/{hid}                    name, currency, invite code
+households/{hid}/members/{uid}      who may read and write it
+households/{hid}/{table}/{id}       accounts, categories, people,
+                                    transactions, budgets, rules
+inviteCodes/{CODE}                  code -> household, so a code can be redeemed
+users/{uid}/households/{hid}        each person's own list
+```
 
-Row-level security is enforced on every table: you can read or write a row only
-while you are a member of the household it belongs to. `my_household_ids()` is a
-`SECURITY DEFINER` function so the membership policy does not recurse into itself.
+Every synced document carries `household_id`, `updated_at` and a `deleted`
+tombstone. The app pushes locally-changed rows first in batched writes, lets the
+server stamp `updated_at` with `serverTimestamp()`, then pulls everything stamped
+at or after its cursor. Last write to reach the server wins, which for a household
+of a few phones is what people actually expect. Because deletes are tombstones
+rather than real deletes, a row deleted on one phone disappears on the others
+instead of coming back to life on their next push. Locally edited rows are never
+overwritten by a pull before they have been pushed.
 
-Realtime is subscribed per household, so an entry added on one phone shows up on
-the others without a refresh. If you would rather not use it, delete the
-`subscribeRealtime` call in `js/app.js`; polling on open still catches everything.
+Firestore has no stored procedures, so creating and joining a household are
+ordinary client writes and `firebase/firestore.rules` is what makes them safe. The
+whole model is one invariant: **you may touch a document only while you are a
+member of the household it lives under.** Membership itself can only be created two
+ways — you created the household, or you presented an invite code that resolves to
+it — and either way you can only add *yourself*, so nobody can write another person
+into a household or promote themselves to owner.
+
+Realtime listeners watch only the newest document in each collection, which is
+enough to know something changed without paying to stream the whole ledger. If you
+would rather not use them, delete the `subscribeRealtime` call in `js/app.js`;
+syncing on open still catches everything.
+
+### If Firebase cannot be reached
+
+The SDK is fetched from `gstatic.com` at runtime. If that is blocked or the network
+is down, the app says so explicitly and keeps working on the device — your entries
+queue as unsynced and go up on the next successful sync. It never silently reverts
+to looking unconfigured.
 
 ---
 
@@ -120,12 +158,18 @@ expenses/
 │   ├── app.js            state, routing, every view, all form handlers
 │   ├── store.js          domain model, seed data, and all analytics
 │   ├── db.js             IndexedDB — the source of truth while running
-│   ├── cloud.js          Supabase auth, households, push/pull sync
+│   ├── cloud.js          Firebase auth, households, push/pull sync
 │   ├── importers.js      CSV parser + MoMo SMS parser + dedupe
 │   ├── charts.js         inline SVG charts, no dependencies
 │   └── money.js          integer minor units, parsing and formatting
-└── supabase/schema.sql   tables, constraints, triggers, RLS, RPC
+└── firebase/
+    ├── firestore.rules        membership rules — the whole access model
+    └── firestore.indexes.json (empty: every query is single-field)
 ```
+
+`firebase.json` and `.firebaserc` sit at the **repo root**, because that is where
+`firebase deploy` runs from and what lets Hosting serve the portfolio at `/` and
+the ledger at `/expenses/`.
 
 ## Colour
 
@@ -141,8 +185,14 @@ mode is its own set of steps, not an automatic inversion.
 - Single currency per household (GHS by default). Multi-currency accounts would need
   a rate table and a reporting currency; the schema has a `currency` column per
   account ready for it, but nothing converts yet.
-- Conflict resolution is last-write-wins per row. Two people editing the *same*
+- Conflict resolution is last-write-wins per document. Two people editing the *same*
   entry within the same few seconds will keep one of the two edits, not merge them.
+- Household creation writes three documents in sequence rather than atomically,
+  because the membership rule has to read the household document and a batch would
+  evaluate every write against the state before the batch. If it fails halfway,
+  creating the household again is safe.
+- Leaving a household removes your membership but does not delete the ledger; an
+  owner clearing out an old household does it from the Firebase console.
 - The MoMo parser covers the common MTN and Vodafone Cash phrasings. Anything it
   cannot read is shown in the "unread messages" list — send the format along and it
   is a few lines to add.

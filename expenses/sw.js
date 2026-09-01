@@ -1,5 +1,5 @@
 // Cache the shell so the app opens with no network. Data never goes through
-// here — it lives in IndexedDB and syncs over the Supabase API, which this
+// here — it lives in IndexedDB and syncs over the Firestore API, which this
 // worker deliberately does not touch.
 
 const CACHE = 'family-ledger-v1';
@@ -24,7 +24,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET') return;
-  if (url.origin !== self.location.origin) return;   // Supabase and the CDN go straight to the network
+  if (url.origin !== self.location.origin) return;   // Firebase and the CDN go straight to the network
 
   // Network-first so a deploy is picked up, cache as the offline fallback.
   event.respondWith(

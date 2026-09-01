@@ -1,6 +1,6 @@
 // IndexedDB is the source of truth for the running app. Every read and every
 // write is local, so the app is instant and works with no network at all;
-// Supabase is a replica that sync.js pushes to and pulls from.
+// Firestore is a replica that cloud.js pushes to and pulls from.
 
 export const STORES = ['accounts', 'categories', 'people', 'transactions', 'budgets', 'rules'];
 const DB_NAME = 'family-ledger';
