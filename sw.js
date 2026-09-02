@@ -7,6 +7,9 @@ const SHELL = [
   './', './index.html', './app.css', './manifest.webmanifest',
   './js/app.js', './js/db.js', './js/store.js', './js/money.js',
   './js/charts.js', './js/cloud.js', './js/importers.js',
+  './vendor/fonts/fonts.css',
+  './vendor/fonts/Inter-latin.woff2',
+  './vendor/fonts/PlayfairDisplay-latin.woff2',
 ];
 
 self.addEventListener('install', (event) => {

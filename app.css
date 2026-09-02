@@ -1,90 +1,111 @@
 /* ===========================================================================
-   Family Ledger — design tokens
+   Family Ledger — The AKs palette
    ---------------------------------------------------------------------------
-   One rule holds the whole thing together: the interface is ink, colour is
-   data. Buttons, tabs and the FAB are near-black (near-white in dark), so the
-   only saturated things on screen are the numbers that mean something — blue
-   for money in, red for money out. It also removes a real ambiguity: the
-   primary button used to be the same blue as the income series.
+   Navy brown, gold, cream. The rule that shapes everything: gold lives on the
+   navy, never on the cream. Measured, not guessed — gold on cream is 2.28:1
+   and fails outright, while gold on navy brown is 5.93:1. So the hero is a
+   navy panel where gold can do its work, cream is the ground, and navy is the
+   ink. A deep gold is kept for the rare moment gold must touch cream.
 
-   Dark is a selected palette stepped for a warm dark ground, declared under
-   both the OS media query and an explicit data-theme stamp so a manual choice
-   wins either way.
+   Colour still means data: blue is money in, red is money out, everywhere.
+   Both were re-validated against the cream card AND the navy panel, in both
+   modes, and clear every gate.
+
+   To match the brand exactly, change --navy, --gold and --cream below; every
+   other value is derived from them by role.
    =========================================================================== */
 
 :root {
   color-scheme: light;
 
-  --paper:      #faf9f7;   /* page ground — warm, not clinical white */
-  --surface:    #ffffff;   /* cards */
-  --surface-2:  #f3f1ed;   /* inset wells, tracks, secondary buttons */
-  --surface-3:  #e9e6e1;
-  --border:     #e9e6e0;
-  --border-strong: #d8d3cb;
+  --navy:  #242a38;        /* navy brown — ink, panels, primary buttons */
+  --gold:  #c9a227;        /* accent — only ever on navy */
+  --cream: #f7f0e1;        /* the ground */
 
-  --ink:        #14130f;   /* primary text AND primary button */
-  --ink-2:      #57544d;
-  --ink-3:      #8b867e;
-  --on-ink:     #fbfaf8;   /* text on an ink button */
+  --paper:     var(--cream);
+  --surface:   #fcf8ef;    /* cards — cream, a shade lighter than the ground */
+  --surface-2: #f0e8d6;    /* wells, tracks, secondary buttons */
+  --surface-3: #e6dcc5;
+  --border:        #e8ddc6;
+  --border-strong: #d4c5a6;
+
+  --ink:    var(--navy);
+  --ink-2:  #4a5062;
+  --ink-3:  #767c8c;
+  --on-ink: var(--cream);
+
+  --panel:        var(--navy);   /* the hero */
+  --on-panel:     var(--cream);
+  --panel-accent: var(--gold);
+  --gold-ink:     #8c6a12;       /* the one gold that may sit on cream (4.7:1) */
+  --rule:         var(--navy);   /* active indicators on light chrome */
 
   --series-in:  #2a78d6;
   --series-out: #e34948;
   --series-1:   #2a78d6;
+  --series-in-on-panel:  #3987e5;   /* the panel is a dark surface: dark steps */
+  --series-out-on-panel: #e66767;
 
   --good:     #0ca30c;
   --warning:  #fab219;
   --critical: #d03b3b;
 
-  --grid: #ebe8e2;
+  --grid: #e9dfc9;
 
-  --shadow-sm: 0 1px 2px rgb(20 19 15 / 5%);
-  --shadow:    0 1px 2px rgb(20 19 15 / 4%), 0 6px 20px -6px rgb(20 19 15 / 10%);
-  --shadow-lg: 0 20px 50px -12px rgb(20 19 15 / 22%);
+  --shadow-sm: 0 1px 2px rgb(36 42 56 / 6%);
+  --shadow:    0 1px 2px rgb(36 42 56 / 5%), 0 6px 20px -6px rgb(36 42 56 / 12%);
+  --shadow-lg: 0 20px 50px -12px rgb(36 42 56 / 30%);
 
   --r-sm: 10px;
   --r:    14px;
   --r-lg: 20px;
   --tap:  44px;
 
-  --font: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
-          "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-display: "Playfair Display", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
     color-scheme: dark;
-    --paper:      #100f0e;
-    --surface:    #1c1a18;
-    --surface-2:  #262320;
-    --surface-3:  #322e2a;
-    --border:     #2e2a26;
-    --border-strong: #443f39;
-    --ink:        #f7f5f1;
-    --ink-2:      #b9b3a9;
-    --ink-3:      #8a847b;
-    --on-ink:     #14130f;
+    --paper:     #14171e;
+    --surface:   #1c212c;
+    --surface-2: #262c3a;
+    --surface-3: #323949;
+    --border:        #2a303d;
+    --border-strong: #3d4557;
+    --ink:    var(--cream);
+    --ink-2:  #b4afa2;
+    --ink-3:  #8a8794;
+    --on-ink: var(--navy);
+    --panel:        #2a3143;   /* lifted, so the hero still reads as a panel */
+    --panel-accent: #d8b44a;
+    --gold:   #d8b44a;
+    --gold-ink: #d8b44a;       /* on dark there is no cream to avoid */
+    --rule:   var(--gold);
     --series-in:  #3987e5;
     --series-out: #e66767;
     --series-1:   #3987e5;
-    --grid: #2b2724;
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
-    --shadow:    0 1px 2px rgb(0 0 0 / 40%), 0 6px 20px -6px rgb(0 0 0 / 55%);
-    --shadow-lg: 0 20px 50px -12px rgb(0 0 0 / 70%);
+    --grid: #2b3140;
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 45%);
+    --shadow:    0 1px 2px rgb(0 0 0 / 45%), 0 6px 20px -6px rgb(0 0 0 / 60%);
+    --shadow-lg: 0 20px 50px -12px rgb(0 0 0 / 72%);
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --paper: #100f0e; --surface: #1c1a18; --surface-2: #262320; --surface-3: #322e2a;
-  --border: #2e2a26; --border-strong: #443f39;
-  --ink: #f7f5f1; --ink-2: #b9b3a9; --ink-3: #8a847b; --on-ink: #14130f;
+  --paper: #14171e; --surface: #1c212c; --surface-2: #262c3a; --surface-3: #323949;
+  --border: #2a303d; --border-strong: #3d4557;
+  --ink: var(--cream); --ink-2: #b4afa2; --ink-3: #8a8794; --on-ink: var(--navy);
+  --panel: #2a3143; --panel-accent: #d8b44a; --gold: #d8b44a; --gold-ink: #d8b44a;
+  --rule: var(--gold);
   --series-in: #3987e5; --series-out: #e66767; --series-1: #3987e5;
-  --grid: #2b2724;
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
-  --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 6px 20px -6px rgb(0 0 0 / 55%);
-  --shadow-lg: 0 20px 50px -12px rgb(0 0 0 / 70%);
+  --grid: #2b3140;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 45%);
+  --shadow: 0 1px 2px rgb(0 0 0 / 45%), 0 6px 20px -6px rgb(0 0 0 / 60%);
+  --shadow-lg: 0 20px 50px -12px rgb(0 0 0 / 72%);
 }
-
 * { box-sizing: border-box; }
 
 body {
@@ -99,8 +120,9 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
-h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.015em; }
-h2 { font-size: 0.95rem; }
+h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+h1, h2 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.005em; }
+h2 { font-size: 1.08rem; }
 h3 { font-size: 0.85rem; }
 p { margin: 0 0 0.6rem; }
 code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }
@@ -129,7 +151,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; padding: 14px 18px; max-width: 780px; margin: 0 auto;
 }
-.app-bar h1 { font-size: 1.05rem; letter-spacing: -0.02em; }
+.app-bar h1 { font-size: 1.25rem; letter-spacing: -0.01em; }
 .app-bar-right { display: flex; align-items: center; gap: 10px; }
 
 .sync-badge {
@@ -174,41 +196,52 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
    parts that make it up sit underneath rather than competing with it. */
 
 .hero {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-lg); padding: 22px 20px 18px; box-shadow: var(--shadow);
+  background: var(--panel); border: 1px solid var(--panel);
+  border-radius: var(--r-lg); padding: 22px 20px 18px;
+  box-shadow: var(--shadow); color: var(--on-panel);
+  position: relative; overflow: hidden;
+}
+/* A thin gold rule along the top edge — gold on navy, where it reads. */
+.hero::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 3px;
+  background: linear-gradient(90deg, var(--panel-accent), color-mix(in srgb, var(--panel-accent) 35%, transparent));
 }
 .hero-label {
-  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.07em;
-  text-transform: uppercase; color: var(--ink-3);
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--panel-accent);
 }
 /* Step the size down as the figure gets longer. A household that clears six
    figures in a month should still see the number, not a line break. */
 .hero-value {
+  font-family: var(--font-display);
   font-size: clamp(1.6rem, 8.8vw, 2.6rem); font-weight: 700;
-  letter-spacing: -0.035em; line-height: 1.05; margin: 6px 0 2px;
-  white-space: nowrap;
+  letter-spacing: -0.02em; line-height: 1.1; margin: 7px 0 3px;
+  white-space: nowrap; color: var(--on-panel);
 }
 .hero-value[data-len="13"], .hero-value[data-len="14"] { font-size: clamp(1.4rem, 7.6vw, 2.3rem); }
 .hero-value[data-len="15"], .hero-value[data-len="16"] { font-size: clamp(1.3rem, 6.8vw, 2rem); }
 .hero-value:not([data-len="1"]):not([data-len="2"]):not([data-len="3"]):not([data-len="4"]):not([data-len="5"]):not([data-len="6"]):not([data-len="7"]):not([data-len="8"]):not([data-len="9"]):not([data-len="10"]):not([data-len="11"]):not([data-len="12"]):not([data-len="13"]):not([data-len="14"]):not([data-len="15"]):not([data-len="16"]) {
   font-size: clamp(1.15rem, 5.8vw, 1.7rem);
 }
-.hero-value.is-positive { color: var(--series-in); }
-.hero-value.is-negative { color: var(--series-out); }
-.hero-note { font-size: 0.78rem; color: var(--ink-3); }
+/* Sign is carried by the +/− character and by the panel's own tint, not by a
+   series colour — the hero is not a chart mark. */
+.hero-value.is-negative { color: #f2a0a0; }
+.hero-note { font-size: 0.78rem; color: color-mix(in srgb, var(--on-panel) 72%, transparent); line-height: 1.45; }
 
 .hero-split {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-  margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border);
+  margin-top: 18px; padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--on-panel) 18%, transparent);
 }
 .hero-cell { display: grid; gap: 3px; min-width: 0; }
 .hero-cell-label {
-  font-size: 0.7rem; color: var(--ink-3); display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.7rem; display: inline-flex; align-items: center; gap: 6px;
+  color: color-mix(in srgb, var(--on-panel) 66%, transparent);
 }
-.hero-cell-value { font-size: 1rem; font-weight: 650; letter-spacing: -0.02em; }
+.hero-cell-value { font-size: 1.02rem; font-weight: 650; letter-spacing: -0.02em; color: var(--on-panel); }
 .swatch-sm { width: 7px; height: 7px; border-radius: 2px; flex: none; }
-.swatch-sm.in  { background: var(--series-in); }
-.swatch-sm.out { background: var(--series-out); }
+.swatch-sm.in  { background: var(--series-in-on-panel); }
+.swatch-sm.out { background: var(--series-out-on-panel); }
 
 .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 @media (min-width: 620px) { .stat-grid { grid-template-columns: repeat(4, 1fr); } }
@@ -228,6 +261,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   width: fit-content; margin: 0 auto;
 }
 .month-nav strong {
+  font-family: var(--font-display);
   font-size: 0.88rem; font-weight: 600; letter-spacing: -0.01em;
   min-width: 9.5rem; text-align: center;
 }
@@ -329,7 +363,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .kind-expense  { color: var(--series-out); }
 .kind-transfer { color: var(--ink-2); }
 .day-head {
-  color: var(--ink-3); font-size: 0.72rem; font-weight: 600;
+  color: var(--gold-ink); font-size: 0.72rem; font-weight: 700;
   letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px;
 }
 
@@ -463,7 +497,7 @@ label.check input { width: auto; min-height: 0; }
   max-height: 92dvh; overflow-y: auto;
 }
 .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
-.sheet-head h2 { font-size: 1.05rem; }
+.sheet-head h2 { font-size: 1.2rem; }
 .amount-field input {
   font-size: 1.9rem; font-weight: 700; letter-spacing: -0.03em;
   min-height: 62px; text-align: right; font-variant-numeric: tabular-nums;
@@ -474,8 +508,8 @@ label.check input { width: auto; min-height: 0; }
   position: fixed; right: 18px; z-index: 25;
   bottom: calc(84px + env(safe-area-inset-bottom));
   width: 56px; height: 56px; border-radius: 50%; border: 0; cursor: pointer;
-  background: var(--ink); color: var(--on-ink); font-size: 1.6rem; line-height: 1;
-  box-shadow: 0 8px 24px -6px rgb(20 19 15 / 45%);
+  background: var(--panel-accent); color: var(--panel); font-size: 1.6rem; line-height: 1;
+  box-shadow: 0 0 0 3px var(--panel), 0 10px 26px -8px rgb(36 42 56 / 55%);
   transition: transform .12s;
 }
 .add-btn:hover { transform: scale(1.05); }
@@ -483,23 +517,23 @@ label.check input { width: auto; min-height: 0; }
 
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  display: flex; background: color-mix(in srgb, var(--surface) 90%, transparent);
-  backdrop-filter: saturate(180%) blur(16px);
-  border-top: 1px solid var(--border);
+  display: flex; background: var(--panel);
+  border-top: 1px solid var(--panel);
   padding-bottom: env(safe-area-inset-bottom);
 }
 .tab {
   flex: 1; border: 0; background: none; cursor: pointer; padding: 10px 4px 8px;
   display: grid; gap: 3px; justify-items: center; position: relative;
-  color: var(--ink-3); font-size: 0.66rem; font-weight: 550; min-height: 58px;
-  transition: color .15s;
+  font-size: 0.66rem; font-weight: 550; min-height: 58px; transition: color .15s;
+  color: color-mix(in srgb, var(--on-panel) 68%, transparent);   /* 6.7:1 on navy */
 }
 .tab::before {
   content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-  width: 0; height: 2px; border-radius: 0 0 2px 2px; background: var(--ink);
+  width: 0; height: 2px; border-radius: 0 0 2px 2px; background: var(--panel-accent);
   transition: width .2s;
 }
-.tab.is-active { color: var(--ink); }
+.tab:hover { color: var(--on-panel); }
+.tab.is-active { color: var(--panel-accent); }        /* gold on navy — 5.9:1 */
 .tab.is-active::before { width: 26px; }
 .tab-icon { font-size: 1.1rem; line-height: 1; }
 
