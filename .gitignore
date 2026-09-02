@@ -1,0 +1,8 @@
+node_modules
+node_modules/
+.firebase/
+*.log
+
+# Vendored Firebase SDK — fetched on demand, not committed.
+# Run: sh expenses/vendor/fetch-sdk.sh
+expenses/vendor/firebase/

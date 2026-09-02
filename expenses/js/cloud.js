@@ -12,7 +12,12 @@
 import * as db from './db.js';
 
 const VERSION = '10.14.1';
-const CDN = `https://www.gstatic.com/firebasejs/${VERSION}`;
+const DEFAULT_CDN = `https://www.gstatic.com/firebasejs/${VERSION}`;
+
+// Where to fetch the Firebase SDK from. Defaults to Google's CDN; set
+// `sdk_base` in the config to serve the three modules yourself instead, which
+// is the answer when a network blocks gstatic.com (see the README).
+let cdnBase = DEFAULT_CDN;
 
 // local store -> Firestore subcollection under households/{id}
 export const TABLES = {
@@ -34,7 +39,7 @@ export const sdkError = () => unreachable;
 
 const SDK_TIMEOUT = 15000;
 
-async function loadSdk() {
+async function loadSdk(base = cdnBase) {
   if (sdk) return sdk;
   // A captive portal or a filtering proxy can leave the request hanging rather
   // than refusing it, and an await that never settles leaves the settings
@@ -43,9 +48,9 @@ async function loadSdk() {
     setTimeout(() => reject(new Error('Timed out fetching the Firebase SDK.')), SDK_TIMEOUT));
   const [core, auth, firestore] = await Promise.race([
     Promise.all([
-      import(/* @vite-ignore */ `${CDN}/firebase-app.js`),
-      import(/* @vite-ignore */ `${CDN}/firebase-auth.js`),
-      import(/* @vite-ignore */ `${CDN}/firebase-firestore.js`),
+      import(/* @vite-ignore */ `${base}/firebase-app.js`),
+      import(/* @vite-ignore */ `${base}/firebase-auth.js`),
+      import(/* @vite-ignore */ `${base}/firebase-firestore.js`),
     ]),
     timeout,
   ]);
@@ -124,7 +129,8 @@ async function getApp() {
   const key = config.projectId + '|' + config.appId;
   if (app && appKey === key) return app;
   try {
-    const { core, auth, firestore } = await loadSdk();
+    cdnBase = config.sdk_base ? String(config.sdk_base).replace(/\/+$/, '') : DEFAULT_CDN;
+    const { core, auth, firestore } = await loadSdk(cdnBase);
     const instance = core.getApps().length ? core.getApp() : core.initializeApp(config);
     app = {
       instance,
@@ -133,6 +139,14 @@ async function getApp() {
       a: auth,
       f: firestore,
     };
+    // Opt-in local emulators, for developing against `firebase emulators:start`
+    // without touching the real project. Set an `emulator` key in the config.
+    if (config.emulator) {
+      const host = config.emulator.host || '127.0.0.1';
+      auth.connectAuthEmulator(app.auth, `http://${host}:${config.emulator.authPort || 9099}`,
+        { disableWarnings: true });
+      firestore.connectFirestoreEmulator(app.fs, host, config.emulator.firestorePort || 8080);
+    }
     await app.a.setPersistence(app.auth, app.a.browserLocalPersistence).catch(() => {});
     appKey = key;
     unreachable = null;
@@ -140,9 +154,11 @@ async function getApp() {
   } catch (err) {
     app = null;
     appKey = '';
-    unreachable = navigator.onLine
-      ? 'Could not load the Firebase SDK. Something on this network is blocking gstatic.com.'
-      : 'Offline — Firebase will connect again when you are back online.';
+    unreachable = !navigator.onLine
+      ? 'Offline — Firebase will connect again when you are back online.'
+      : cdnBase === DEFAULT_CDN
+        ? 'Could not load the Firebase SDK. Something on this network is blocking gstatic.com.'
+        : `Could not load the Firebase SDK from ${cdnBase}.`;
     return null;
   }
 }
@@ -281,10 +297,33 @@ export async function joinHousehold(code, displayName) {
   return { id: householdId, ...data };
 }
 
-export async function useHousehold(householdId) {
-  const previous = await db.meta.get('household_id');
-  if (previous && previous !== householdId) await db.wipeLocal();
+/**
+ * The household this device's local rows currently belong to. Before any
+ * cloud project exists the app still runs against a household id — a local
+ * one — so both keys have to be consulted. Reading only `household_id` was a
+ * bug: joining a household then left the previous rows in place, which both
+ * duplicated the seeded accounts and categories and pushed this device's
+ * throwaway defaults into the household being joined.
+ */
+export async function currentLocalHousehold() {
+  return (await db.meta.get('household_id')) || (await db.meta.get('local_household')) || null;
+}
+
+/**
+ * Point this device at a household.
+ *
+ * `keepLocal` decides what happens to rows already here, and the two callers
+ * want opposite things. Creating a household from a device you have been
+ * tracking on solo should carry that history in (keepLocal: true, with
+ * store.reassignHousehold doing the rewrite). Joining somebody else's existing
+ * ledger should not — merging two independently seeded category trees leaves a
+ * duplicate of every default — so the local rows are cleared.
+ */
+export async function useHousehold(householdId, { keepLocal = false } = {}) {
+  const previous = await currentLocalHousehold();
+  if (!keepLocal && previous && previous !== householdId) await db.wipeLocal();
   await db.meta.set('household_id', householdId);
+  await db.meta.del('local_household');
 }
 
 // -------------------------------------------------------------------- sync
@@ -385,7 +424,7 @@ export async function pull(fb, householdId) {
 
 const friendlySyncError = (err) => {
   const message = (err && err.message) || String(err);
-  if (/permission|insufficient/i.test(message)) {
+  if (/permission|insufficient|evaluation error|false for/i.test(message)) {
     return 'Firestore refused the write. Check the security rules are deployed and you have joined this household.';
   }
   if (/requires an index/i.test(message)) return 'Firestore needs an index — the console error links straight to it.';

@@ -1,0 +1,12 @@
+{
+  "_comment": "Emulator config for the rules tests and local development only. Hosting and the real deploy live in firebase.json at the repo root.",
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "emulators": {
+    "auth": { "host": "127.0.0.1", "port": 9099 },
+    "firestore": { "host": "127.0.0.1", "port": 8080 },
+    "ui": { "enabled": false }
+  }
+}

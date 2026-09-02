@@ -567,6 +567,22 @@ function viewSettings() {
   </section>`;
 }
 
+/**
+ * Adopting a different household clears what is on this device. That is the
+ * right call when joining somebody else's ledger, but it must never happen
+ * silently to someone who has real entries here.
+ */
+async function confirmReplaceLocal(targetId = null) {
+  const previous = await cloud.currentLocalHousehold();
+  if (!previous || previous === targetId) return true;
+  const count = state.data.transactions.length;
+  if (!count) return true;
+  return confirm(
+    `This device has ${count} entries that are not part of that household.\n\n` +
+    'Switching replaces them with the household\'s ledger. Export them first from ' +
+    'Settings → Your data if you want to keep a copy.\n\nContinue?');
+}
+
 async function paintCloudPanel() {
   const panel = $('#cloud-panel');
   if (!panel) return;
@@ -924,10 +940,11 @@ document.addEventListener('change', async (event) => {
   }
   const picker = event.target.closest('[data-action="pick-household"]');
   if (picker) {
+    if (!(await confirmReplaceLocal(picker.value))) { render(); return; }
     await cloud.useHousehold(picker.value);
     state.householdId = picker.value;
+    await trySync({ quiet: false });          // pull before seeding, as above
     await S.seedIfEmpty(state.householdId);
-    await trySync({ quiet: false });
     await refresh();
     return;
   }
@@ -1064,21 +1081,30 @@ const FORMS = {
   'new-household': async (form) => {
     const data = Object.fromEntries(new FormData(form));
     const household = await cloud.createHousehold(data.name, state.currency);
-    await cloud.useHousehold(household.id);
+    // Whatever is already on this device becomes this household's opening
+    // ledger, rather than being discarded.
+    await cloud.useHousehold(household.id, { keepLocal: true });
     state.householdId = household.id;
+    const moved = await S.reassignHousehold(household.id);
     await S.seedIfEmpty(household.id);
     await refresh({ rerender: false });
     await trySync({ quiet: false });
     await refresh();
-    toast(`Created ${household.name} — invite code ${household.invite_code}`);
+    toast(`Created ${household.name} — invite code ${household.invite_code}` +
+      (moved ? ` · brought ${moved} existing records with you` : ''));
   },
 
   'join-household': async (form) => {
     const data = Object.fromEntries(new FormData(form));
+    if (!(await confirmReplaceLocal())) return;
     const household = await cloud.joinHousehold(data.code, state.user && state.user.email);
     await cloud.useHousehold(household.id);
     state.householdId = household.id;
+    // Pull before seeding. Seeding first would recreate the default accounts
+    // and categories locally, and the pull would then land the household's own
+    // copies alongside them — one duplicate of every default.
     await trySync({ quiet: false });
+    await S.seedIfEmpty(household.id);
     await refresh();
     toast('Joined ' + household.name);
   },
@@ -1111,6 +1137,7 @@ document.addEventListener('keydown', (event) => {
 
 async function boot() {
   const config = await cloud.getConfig();
+  const joined = Boolean(config.householdId);
   state.householdId = config.householdId || (await db.meta.get('local_household')) || null;
 
   if (!state.householdId) {
@@ -1119,7 +1146,11 @@ async function boot() {
     state.householdId = S.uid();
     await db.meta.set('local_household', state.householdId);
   }
-  await S.seedIfEmpty(state.householdId);
+
+  // A device already attached to a household seeds only after its first pull.
+  // Seeding a fresh phone before it has synced would give the household a
+  // second set of default accounts and categories.
+  if (!joined) await S.seedIfEmpty(state.householdId);
   await refresh({ rerender: false });
 
   const hash = location.hash.replace('#', '');
@@ -1127,7 +1158,13 @@ async function boot() {
   render();
 
   if (await cloud.isConfigured()) {
-    trySync().then(() => cloud.subscribeRealtime(() => trySync()));
+    trySync()
+      .then(async () => {
+        await S.seedIfEmpty(state.householdId);   // no-op once the pull brought data
+        await refresh();
+        return cloud.subscribeRealtime(() => trySync());
+      })
+      .catch(() => {});
     cloud.onAuthChange(() => paintCloudPanel());
   } else {
     state.sync = { status: 'local', message: 'This device only' };

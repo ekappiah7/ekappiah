@@ -110,6 +110,25 @@ export async function loadAll() {
   };
 }
 
+/**
+ * Move every local row into another household, marking it dirty so the next
+ * push carries it up. Used when a device that has been tracking on its own
+ * creates the family household — that history is the point, not something to
+ * throw away.
+ */
+export async function reassignHousehold(householdId) {
+  let moved = 0;
+  for (const store of db.STORES) {
+    const rows = await db.all(store);
+    const changed = rows
+      .filter(row => row.household_id !== householdId)
+      .map(row => ({ ...row, household_id: householdId, updated_at: new Date().toISOString(), _dirty: 1 }));
+    if (changed.length) await db.putMany(store, changed);
+    moved += changed.length;
+  }
+  return moved;
+}
+
 export async function seedIfEmpty(householdId) {
   const existing = await db.all('categories');
   if (existing.length) return false;

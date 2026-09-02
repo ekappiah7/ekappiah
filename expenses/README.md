@@ -142,7 +142,73 @@ syncing on open still catches everything.
 The SDK is fetched from `gstatic.com` at runtime. If that is blocked or the network
 is down, the app says so explicitly and keeps working on the device — your entries
 queue as unsynced and go up on the next successful sync. It never silently reverts
-to looking unconfigured.
+to looking unconfigured. The fetch also has a timeout, because a filtering proxy
+can leave the request hanging rather than refusing it.
+
+You can take gstatic out of the loop entirely by serving the SDK yourself:
+
+```sh
+sh expenses/vendor/fetch-sdk.sh
+```
+
+Then add `"sdk_base": "/expenses/vendor/firebase"` to the config you paste into
+Settings. Firebase Hosting then serves the SDK from your own origin — one fewer
+third party, and immune to gstatic being blocked. The files are gitignored, so run
+the script again after a fresh clone.
+
+---
+
+## Tests
+
+The security rules are the only thing standing between one family's ledger and
+everyone else's, and a rule that is subtly too permissive fails *silently* —
+nothing errors, the data is just readable by people who should not see it. So they
+are tested rather than eyeballed.
+
+```sh
+cd expenses/firebase
+npm install
+npm test        # 28 security-rules tests against the Firestore emulator
+```
+
+Covered: a member reads and writes their own household; a non-member and a
+signed-out visitor are refused on every one of the six synced collections; invite
+codes can be redeemed but not enumerated, repointed, or minted for a household you
+are not in; membership can only ever be created for *yourself*, and only by the
+household's creator or with a valid code; a member cannot promote themselves to
+owner; and each person's household index is private to them.
+
+These were mutation-checked — with the ledger rule loosened to `if signedIn()`,
+11 of the 28 fail; with the invite-code check removed from membership creation,
+4 fail. A suite that stays green against broken rules would be worse than none.
+
+There is also an end-to-end test that drives the real app in a real browser across
+**two devices**, against the Auth and Firestore emulators:
+
+```sh
+sh vendor/fetch-sdk.sh                 # serve the SDK locally
+python3 -m http.server 8777 &          # from the repo root
+cd expenses/firebase && npm run test:e2e
+```
+
+It signs up two people, creates a household, joins it with the invite code, and
+checks that entries and *deletions* propagate both ways, that a joining device ends
+up with exactly one set of default accounts and categories, and that a third,
+non-member account is refused and leaks nothing. That last pair of checks exists
+because the first version failed them: a joining device kept its own seeded
+defaults (giving a duplicate of every category) and pushed them into the household
+it was joining.
+
+### Developing against the emulators
+
+Add an `emulator` key to the config you paste into Settings and the app talks to
+local emulators instead of your real project:
+
+```json
+{ "apiKey": "demo", "authDomain": "localhost", "projectId": "your-project-id",
+  "appId": "1:1:web:1",
+  "emulator": { "host": "127.0.0.1", "authPort": 9099, "firestorePort": 8080 } }
+```
 
 ---
 
@@ -162,9 +228,14 @@ expenses/
 │   ├── importers.js      CSV parser + MoMo SMS parser + dedupe
 │   ├── charts.js         inline SVG charts, no dependencies
 │   └── money.js          integer minor units, parsing and formatting
+├── vendor/fetch-sdk.sh   optional: serve the Firebase SDK from your own origin
 └── firebase/
     ├── firestore.rules        membership rules — the whole access model
-    └── firestore.indexes.json (empty: every query is single-field)
+    ├── firestore.indexes.json (empty: every query is single-field)
+    ├── firebase.json          emulator config, for the tests only
+    └── tests/
+        ├── rules.test.mjs     28 security-rules tests
+        └── sync.e2e.mjs       two-device sync, in a real browser
 ```
 
 `firebase.json` and `.firebaserc` sit at the **repo root**, because that is where
