@@ -36,14 +36,18 @@ async function device(label) {
   const ctx = await browser.newContext({ viewport: { width: 420, height: 900 } });
   const page = await ctx.newPage();
   page.on('pageerror', e => console.log(`[${label} pageerror]`, e.message.slice(0, 140)));
-  await page.goto(APP, { waitUntil: 'networkidle' });
+  // Not networkidle: the webfont is fetched from a third party and a slow or
+  // blocked network leaves that request open forever. It never blocks render.
+  await page.goto(APP, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.tabbar');
   await page.waitForTimeout(400);
   await page.evaluate(async (cfg) => {
     const cloud = await import('./js/cloud.js');
     await cloud.setConfig(JSON.stringify(cfg));
   }, CONFIG);
-  await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(800);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.tabbar');
+  await page.waitForTimeout(900);
   return { label, page, ctx };
 }
 

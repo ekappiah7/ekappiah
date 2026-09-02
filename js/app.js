@@ -126,12 +126,27 @@ function viewHome() {
 
   return `
   ${monthNav(state.month)}
-  <div class="stat-grid">
-    ${renderStat(money(sum.inflow, { compact: true }), 'Money in', 'tone-in')}
-    ${renderStat(money(sum.outflow, { compact: true }), 'Money out', 'tone-out')}
-    ${renderStat(money(sum.net, { compact: true, signed: true }), 'Net this month', sum.net >= 0 ? 'tone-in' : 'tone-out')}
-    ${renderStat(sum.savingsRate === null ? '—' : formatPercent(sum.savingsRate), 'Saved of income')}
-  </div>
+
+  <section class="hero">
+    <span class="hero-label">Net this month</span>
+    <div class="hero-value ${sum.net >= 0 ? 'is-positive' : sum.net < 0 ? 'is-negative' : ''}"
+         data-len="${money(sum.net, { signed: true }).length}">${money(sum.net, { signed: true })}</div>
+    <span class="hero-note">${heroNote(sum)}</span>
+    <div class="hero-split">
+      <div class="hero-cell">
+        <span class="hero-cell-label"><i class="swatch-sm in"></i>Money in</span>
+        <span class="hero-cell-value">${money(sum.inflow, { compact: true })}</span>
+      </div>
+      <div class="hero-cell">
+        <span class="hero-cell-label"><i class="swatch-sm out"></i>Money out</span>
+        <span class="hero-cell-value">${money(sum.outflow, { compact: true })}</span>
+      </div>
+      <div class="hero-cell">
+        <span class="hero-cell-label">Saved</span>
+        <span class="hero-cell-value">${sum.savingsRate === null ? '—' : formatPercent(sum.savingsRate)}</span>
+      </div>
+    </div>
+  </section>
 
   <section class="card">
     <h2>Money in vs money out</h2>
@@ -171,6 +186,14 @@ function viewHome() {
       : '<p class="muted">Nothing recorded yet. Tap + to add your first entry.</p>'}
     <button class="link-btn" data-action="go" data-view="ledger">Full ledger →</button>
   </section>`;
+}
+
+/** A plain-language read of the month, so the hero number is not alone. */
+function heroNote(sum) {
+  if (!sum.count) return 'Nothing recorded yet this month.';
+  if (!sum.inflow) return `${money(sum.outflow)} spent, no income recorded yet.`;
+  if (sum.net >= 0) return `${money(sum.inflow)} in, ${money(sum.outflow)} out — you kept ${formatPercent(sum.savingsRate)}.`;
+  return `${money(sum.outflow)} out against ${money(sum.inflow)} in — ${money(-sum.net)} more than came in.`;
 }
 
 function budgetBar(b) {
@@ -702,7 +725,8 @@ function openSheet(txn) {
       <label>Fee <input name="fee" inputmode="decimal" value="${t.fee ? toInput(t.fee) : ''}" placeholder="0.00"></label>
     </div>
 
-    <label id="acct-from-label">From account <select name="account_id" required>${accountOptions(t.account_id)}</select></label>
+    <label id="acct-from-label">${t.kind === 'transfer' ? 'From account' : 'Account'}
+      <select name="account_id" required>${accountOptions(t.account_id)}</select></label>
     <label id="acct-to-label" ${t.kind === 'transfer' ? '' : 'hidden'}>To account
       <select name="to_account_id">${accountOptions(t.to_account_id)}</select></label>
     <label id="cat-label" ${t.kind === 'transfer' ? 'hidden' : ''}>Category
@@ -729,7 +753,8 @@ function openSheet(txn) {
       dialog.querySelector('input[name=kind]').value = kind;
       $('#acct-to-label', dialog).hidden = kind !== 'transfer';
       $('#cat-label', dialog).hidden = kind === 'transfer';
-      $('#acct-from-label', dialog).firstChild.textContent = kind === 'transfer' ? 'From account ' : 'Account ';
+      $('#acct-from-label', dialog).firstChild.textContent =
+        kind === 'transfer' ? 'From account\n      ' : 'Account\n      ';
       $('select[name=category_id]', dialog).innerHTML =
         categoryOptions(kind === 'income' ? 'in' : 'out', '');
     });
