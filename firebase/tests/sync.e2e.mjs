@@ -9,18 +9,18 @@
 //
 // Needs, in three terminals or one script:
 //   1. a static server at the repo root      python3 -m http.server 8777
-//   2. the vendored SDK                      sh expenses/vendor/fetch-sdk.sh
-//   3. this, from expenses/firebase/         npm run test:e2e
+//   2. the vendored SDK                      sh vendor/fetch-sdk.sh
+//   3. this, from firebase/                  npm run test:e2e
 //
 // Chromium comes from Playwright; set CHROME_PATH to override.
 import { chromium } from 'playwright';
 
-const APP = process.env.APP_URL || 'http://127.0.0.1:8777/expenses/index.html';
+const APP = process.env.APP_URL || 'http://127.0.0.1:8777/index.html';
 const CONFIG = {
   apiKey: 'demo-key', authDomain: 'localhost', projectId: 'family-ledger-rules-test',
   appId: '1:1:web:1',
   emulator: { host: '127.0.0.1', authPort: 9099, firestorePort: 8080 },
-  sdk_base: (process.env.APP_URL || 'http://127.0.0.1:8777/expenses/index.html')
+  sdk_base: (process.env.APP_URL || 'http://127.0.0.1:8777/index.html')
     .replace(/\/index\.html$/, '') + '/vendor/firebase',
 };
 

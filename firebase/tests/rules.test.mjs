@@ -1,6 +1,6 @@
 // Security-rules tests, run against the Firestore emulator.
 //
-//   cd expenses/firebase/tests && npm install && npm test
+//   cd firebase && npm install && npm test
 //
 // These are the tests that matter most in this project: the rules are the only
 // thing standing between one family's ledger and everyone else's, and a rule

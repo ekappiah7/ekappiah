@@ -7,8 +7,8 @@
 #   - same-origin means one fewer DNS + TLS handshake on a slow connection
 #   - the service worker can then cache it, so a cold start works offline
 #
-# Usage:  sh expenses/vendor/fetch-sdk.sh
-# Then add  "sdk_base": "/expenses/vendor/firebase"  to the config you paste
+# Usage:  sh vendor/fetch-sdk.sh
+# Then add  "sdk_base": "/vendor/firebase"  to the config you paste
 # into Settings → Family sharing.
 
 set -eu

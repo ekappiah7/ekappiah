@@ -589,7 +589,7 @@ async function paintCloudPanel() {
   const config = await cloud.getConfig();
   if (!config.config) {
     panel.innerHTML = `
-      <p class="card-sub">The app works on its own. Add a Firebase project to share one ledger across the family’s phones. Setup steps are in <code>expenses/README.md</code>.</p>
+      <p class="card-sub">The app works on its own. Add a Firebase project to share one ledger across the family’s phones. Setup steps are in <code>README.md</code>.</p>
       <form class="stack-form" data-form="firebase">
         <label>Firebase web config
           <textarea name="config" rows="7" required
