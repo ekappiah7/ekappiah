@@ -69,25 +69,66 @@ const REQUIRED = ['apiKey', 'authDomain', 'projectId', 'appId'];
 /** Quote bare keys, normalise quotes, drop comments and trailing commas. */
 function toStrictJson(body) {
   return body
-    .replace(/\/\*[\s\S]*?\*\//g, '')                      // block comments
-    .replace(/(^|[^:])\/\/.*$/gm, '$1')                      // line comments
     .replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, (_, inner) => JSON.stringify(inner))
     .replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":')  // bare keys
     .replace(/,(\s*[}\]])/g, '$1');                          // trailing commas
 }
 
+function stripComments(text) {
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, '')       // block comments
+    .replace(/(^|[^:])\/\/.*$/gm, '$1');      // line comments, sparing https://
+}
+
+/**
+ * Pull every top-level `{ ... }` out of a blob, skipping braces inside string
+ * literals. The console snippet opens with `import { initializeApp } from …`,
+ * so "first brace to last brace" grabs the import statement and everything
+ * after it — which is what the earlier version did, and why pasting the real
+ * snippet failed.
+ */
+function objectLiterals(text) {
+  const blocks = [];
+  let depth = 0, start = -1, quote = null;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quote) {
+      if (ch === '\\') i++;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') { quote = ch; continue; }
+    if (ch === '{') { if (depth === 0) start = i; depth++; continue; }
+    if (ch === '}' && depth > 0) {
+      depth--;
+      if (depth === 0 && start > -1) { blocks.push(text.slice(start, i + 1)); start = -1; }
+    }
+  }
+  return blocks;
+}
+
+/**
+ * Accept a Firebase web config however it arrives: bare JSON, the
+ * `const firebaseConfig = { … };` line on its own, or the whole snippet the
+ * console shows including the import and the initializeApp call.
+ */
 export function parseFirebaseConfig(input) {
   if (!input) throw new Error('Paste your Firebase config.');
   if (typeof input === 'object') return input;
-  const text = String(input).trim();
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start === -1 || end === -1) throw new Error('That does not look like a Firebase config object.');
-  const body = text.slice(start, end + 1);
+
+  const text = stripComments(String(input));
+  // The config is the block that has an apiKey in it — not the import braces.
+  const candidates = objectLiterals(text).filter(b => /["']?apiKey["']?\s*:/.test(b));
+  if (!candidates.length) {
+    throw new Error('No Firebase config found in that paste — it needs the { apiKey: … } block.');
+  }
 
   let parsed = null;
-  for (const candidate of [body, toStrictJson(body)]) {
-    try { parsed = JSON.parse(candidate); break; } catch { /* try the next form */ }
+  for (const block of candidates) {
+    for (const form of [block, toStrictJson(block)]) {
+      try { parsed = JSON.parse(form); break; } catch { /* try the next form */ }
+    }
+    if (parsed) break;
   }
   if (!parsed || typeof parsed !== 'object') {
     throw new Error('Could not read that config. Copy the whole { ... } block from the Firebase console.');
