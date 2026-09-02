@@ -11,7 +11,8 @@ phone in the house, each person signing in as themselves.
 
 - **Deploy**: `firebase deploy` from the repo root. `firebase.json` serves the whole
   repo, so the portfolio stays at `/` and the app lives at `/expenses/`. Nothing to
-  build — it is plain ES modules and CSS.
+  build — it is plain ES modules and CSS. The project is `jaksexp`, so the ledger
+  lands at **https://jaksexp.web.app/expenses/**.
 - **Locally**: `python3 -m http.server 8000` from the repo root, then open
   `http://localhost:8000/expenses/`. (Open the folder over `http://`, not `file://` —
   ES modules and service workers need an origin.)
@@ -79,11 +80,11 @@ is required.
    **production mode** and pick a region close to you (`europe-west1` is a reasonable
    default from Ghana). Production mode denies everything until step 4, which is
    what you want.
-4. **Deploy the rules**, from the repo root:
+4. **Deploy the rules**, from the repo root. `.firebaserc` already points at the
+   `jaksexp` project, so no `--project` flag is needed:
    ```sh
    npm install -g firebase-tools     # once
-   firebase login
-   # put your project id in .firebaserc, then:
+   firebase login                    # once
    firebase deploy --only firestore:rules
    ```
    Nothing works until these are deployed — production mode denies all reads and
@@ -205,7 +206,7 @@ Add an `emulator` key to the config you paste into Settings and the app talks to
 local emulators instead of your real project:
 
 ```json
-{ "apiKey": "demo", "authDomain": "localhost", "projectId": "your-project-id",
+{ "apiKey": "demo", "authDomain": "localhost", "projectId": "jaksexp",
   "appId": "1:1:web:1",
   "emulator": { "host": "127.0.0.1", "authPort": 9099, "firestorePort": 8080 } }
 ```
