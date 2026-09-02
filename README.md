@@ -227,7 +227,10 @@ local emulators instead of your real project:
 │   ├── importers.js      CSV parser + MoMo SMS parser + dedupe
 │   ├── charts.js         inline SVG charts, no dependencies
 │   └── money.js          integer minor units, parsing and formatting
-├── vendor/fetch-sdk.sh   optional: serve the Firebase SDK from your own origin
+├── vendor/
+│   ├── fetch-sdk.sh      optional: serve the Firebase SDK from your own origin
+│   ├── fetch-fonts.sh    re-fetch the self-hosted webfonts
+│   └── fonts/            Playfair Display + Inter, committed
 ├── firebase.json         Hosting + Firestore deploy config
 ├── .firebaserc           names the jaksexp project
 └── firebase/
@@ -242,14 +245,35 @@ local emulators instead of your real project:
 Everything runs from the **repo root** — that is where `firebase deploy` looks for
 `firebase.json`, and where a static server should be pointed when developing.
 
-## Colour
+## Colour and type
 
-Money in is blue, money out is red, in both light and dark, always — colour follows
-the entity, never its rank. Both pairs were checked for colour-vision separation
-against their own surface (CVD ΔE 21.6 light / 19.2 dark, both clear of the ≥8
-target, both ≥3:1 contrast). Category and per-person breakdowns are a single hue,
+The AKs palette: **navy brown, gold, cream.** One rule shapes the whole interface —
+**gold lives on the navy, never on the cream.** That is measured, not a preference:
+gold on cream is 2.28:1 and fails, gold on navy brown is 5.93:1 and passes
+comfortably. So gold has exactly two homes, the hero panel and the tab bar, and a
+deeper gold (`--gold-ink`, 4.7:1) is kept for the one place gold must touch cream —
+the date headings in the ledger.
+
+Cream is the ground, navy brown is the ink, and the hero is a navy panel so the
+brand reads the moment the app opens.
+
+To match the brand exactly, change `--navy`, `--gold` and `--cream` at the top of
+`app.css`. Everything else derives from them by role.
+
+Underneath that, colour still means data: **money in is blue, money out is red**, in
+both themes, always — colour follows the entity, never its rank. Both were
+re-validated against the cream card *and* the navy panel in both modes and clear
+every gate (CVD ΔE 21.6 light / 19.2 dark against a ≥8 target; contrast ≥3:1 on
+every surface they appear on). Category and per-person breakdowns are a single hue,
 because identity there lives on the axis and a rainbow would encode nothing. Dark
-mode is its own set of steps, not an automatic inversion.
+mode is its own set of steps, not an inversion.
+
+Type is **Playfair Display** for the things that carry the brand — the app title,
+section headings, the month, and the hero figure — with **Inter** for everything
+else, because dense rows of money want a sans with real tabular figures. Both are
+self-hosted from `vendor/fonts/` (latin subsets, committed), so there is no
+third-party request on load and the type survives going offline. Re-fetch or bump
+versions with `sh vendor/fetch-fonts.sh`.
 
 ## Known limits
 
