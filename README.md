@@ -247,33 +247,39 @@ Everything runs from the **repo root** — that is where `firebase deploy` looks
 
 ## Colour and type
 
-The AKs palette: **navy brown, gold, cream.** One rule shapes the whole interface —
-**gold lives on the navy, never on the cream.** That is measured, not a preference:
-gold on cream is 2.28:1 and fails, gold on navy brown is 5.93:1 and passes
-comfortably. So gold has exactly two homes, the hero panel and the tab bar, and a
-deeper gold (`--gold-ink`, 4.7:1) is kept for the one place gold must touch cream —
-the date headings in the ledger.
+The AKs palette: **navy brown, gold, cream** — the family's own deep warm brown,
+gold and cream, matched to the brand's existing apps.
 
-Cream is the ground, navy brown is the ink, and the hero is a navy panel so the
-brand reads the moment the app opens.
+One rule shapes the whole interface: **gold lives on the brown, never on the
+cream.** That is measured, not a preference — gold on cream is 1.9:1 and fails
+outright, gold on the brown is 7.4:1. So gold has homes where it can be read (the
+wordmark, the hero panel, the tab bar, the add button) and a deeper gold
+(`--gold-ink`, 5.2:1) is kept for the one place gold must touch cream: the ledger's
+date headings.
 
-To match the brand exactly, change `--navy`, `--gold` and `--cream` at the top of
+In light, cream is the ground and brown the ink at 13.9:1. In dark, the deep brown
+becomes the ground with cream text at 15.1:1 and the brighter gold throughout. Both
+carry a faint gold radial warmth, as the brand does.
+
+The header follows the brand's pattern: the **AK** monogram, the app name in script,
+and a theme pill that cycles Auto → Light → Dark and remembers the choice.
+
+To match the brand exactly, change `--brown`, `--gold` and `--cream` at the top of
 `app.css`. Everything else derives from them by role.
 
 Underneath that, colour still means data: **money in is blue, money out is red**, in
 both themes, always — colour follows the entity, never its rank. Both were
-re-validated against the cream card *and* the navy panel in both modes and clear
-every gate (CVD ΔE 21.6 light / 19.2 dark against a ≥8 target; contrast ≥3:1 on
-every surface they appear on). Category and per-person breakdowns are a single hue,
+re-validated against the cream card, the brown panel *and* the deep-brown dark
+ground and clear every gate (CVD ΔE 21.6 light / 19.2 dark against a ≥8 target;
+contrast ≥3:1 on every surface they appear on). Category and per-person breakdowns are a single hue,
 because identity there lives on the axis and a rainbow would encode nothing. Dark
 mode is its own set of steps, not an inversion.
 
-Type is **Playfair Display** for the things that carry the brand — the app title,
-section headings, the month, and the hero figure — with **Inter** for everything
-else, because dense rows of money want a sans with real tabular figures. Both are
-self-hosted from `vendor/fonts/` (latin subsets, committed), so there is no
-third-party request on load and the type survives going offline. Re-fetch or bump
-versions with `sh vendor/fetch-fonts.sh`.
+Type is **Yellowtail** for the wordmark, **Playfair Display** for headings, the
+month and the hero figure, and **Inter** for everything else — dense rows of money
+want a sans with real tabular figures. All three are self-hosted from `vendor/fonts/`
+(latin subsets, committed), so there is no third-party request on load and the type
+survives going offline. Re-fetch or bump versions with `sh vendor/fetch-fonts.sh`.
 
 ## Known limits
 

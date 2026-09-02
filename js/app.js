@@ -64,6 +64,26 @@ async function trySync({ quiet = true } = {}) {
   return result;
 }
 
+const THEMES = ['system', 'light', 'dark'];
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === 'system') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', theme);
+  const button = $('#theme-btn');
+  if (button) {
+    const label = { system: '◐ Auto', light: '☀ Light', dark: '☾ Dark' }[theme];
+    button.textContent = label;
+    button.setAttribute('aria-label', `Theme: ${theme}. Tap to change.`);
+  }
+  const meta = document.querySelector('meta[name="theme-color"]:not([media])')
+    || Object.assign(document.createElement('meta'), { name: 'theme-color' });
+  if (!meta.parentNode) document.head.appendChild(meta);
+  const dark = theme === 'dark' ||
+    (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+  meta.setAttribute('content', dark ? '#2a1810' : '#f5eee0');
+}
+
 function paintSyncBadge() {
   const badge = $('#sync-badge');
   if (!badge) return;
@@ -805,7 +825,7 @@ const TITLES = {
 
 function render() {
   $('#view-title').textContent = TITLES[state.view];
-  $('#main').innerHTML = (VIEWS[state.view] || viewHome)();
+  $('#view').innerHTML = (VIEWS[state.view] || viewHome)();
   document.querySelectorAll('.tab').forEach(tab =>
     tab.classList.toggle('is-active', tab.dataset.view === state.view));
   document.querySelectorAll('[data-menu-view]').forEach(item =>
@@ -943,6 +963,12 @@ const ACTIONS = {
     navigator.clipboard.writeText(el.dataset.code).then(() => toast('Invite code copied'));
   },
   menu: () => { const m = $('#menu'); m.hidden = !m.hidden; },
+  theme: async () => {
+    const current = (await db.meta.get('theme')) || 'system';
+    const next = THEMES[(THEMES.indexOf(current) + 1) % THEMES.length];
+    await db.meta.set('theme', next);
+    applyTheme(next);
+  },
 };
 
 document.addEventListener('click', async (event) => {
@@ -1161,6 +1187,7 @@ document.addEventListener('keydown', (event) => {
 // -------------------------------------------------------------------- startup
 
 async function boot() {
+  applyTheme((await db.meta.get('theme')) || 'system');
   const config = await cloud.getConfig();
   const joined = Boolean(config.householdId);
   state.householdId = config.householdId || (await db.meta.get('local_household')) || null;
